@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { colors, typography, spacing } from '@/styles/commonStyles';
 import {
   View,
@@ -14,6 +14,7 @@ import {
 import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { useSettings } from '@/contexts/SettingsContext';
 
 type Unit = 'g' | 'kg' | 'ml' | 'L' | 'oz' | 'lb' | 'pcs';
 
@@ -33,37 +34,22 @@ interface ComparisonResult {
 const UNITS: Unit[] = ['g', 'kg', 'ml', 'L', 'oz', 'lb', 'pcs'];
 
 export default function CompareScreen() {
+  const { defaultUnit, decimalPrecision } = useSettings();
   const [priceA, setPriceA] = useState('');
   const [quantityA, setQuantityA] = useState('');
-  const [unitA, setUnitA] = useState<Unit>('g');
+  const [unitA, setUnitA] = useState<Unit>(defaultUnit);
 
   const [priceB, setPriceB] = useState('');
   const [quantityB, setQuantityB] = useState('');
-  const [unitB, setUnitB] = useState<Unit>('g');
+  const [unitB, setUnitB] = useState<Unit>(defaultUnit);
 
   const [result, setResult] = useState<ComparisonResult | null>(null);
-  const [decimalPrecision, setDecimalPrecision] = useState(3);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    try {
-      const defaultUnit = await AsyncStorage.getItem('defaultUnit');
-      const precision = await AsyncStorage.getItem('decimalPrecision');
-      
-      if (defaultUnit) {
-        setUnitA(defaultUnit as Unit);
-        setUnitB(defaultUnit as Unit);
-      }
-      if (precision) {
-        setDecimalPrecision(parseInt(precision));
-      }
-    } catch (error) {
-      console.log('Error loading settings:', error);
-    }
-  };
+  React.useEffect(() => {
+    console.log('Compare screen: Default unit changed to:', defaultUnit);
+    setUnitA(defaultUnit);
+    setUnitB(defaultUnit);
+  }, [defaultUnit]);
 
   const handleCompare = async () => {
     console.log('User tapped COMPARE NOW button');
@@ -225,7 +211,7 @@ export default function CompareScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>UNIT</Text>
             <View style={styles.unitSelector}>
-              {UNITS.map((unit, index) => (
+              {UNITS.map((unit) => (
                 <React.Fragment key={unit}>
                   <TouchableOpacity
                     style={[
@@ -281,7 +267,7 @@ export default function CompareScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>UNIT</Text>
             <View style={styles.unitSelector}>
-              {UNITS.map((unit, index) => (
+              {UNITS.map((unit) => (
                 <React.Fragment key={unit}>
                   <TouchableOpacity
                     style={[

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { colors, typography, spacing } from '@/styles/commonStyles';
 import {
   View,
@@ -14,6 +14,7 @@ import {
 import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { useSettings } from '@/contexts/SettingsContext';
 
 type Unit = 'g' | 'kg' | 'ml' | 'L' | 'oz' | 'lb' | 'pcs';
 
@@ -28,31 +29,16 @@ interface Calculation {
 const UNITS: Unit[] = ['g', 'kg', 'ml', 'L', 'oz', 'lb', 'pcs'];
 
 export default function CalculateScreen() {
+  const { defaultUnit, decimalPrecision } = useSettings();
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [selectedUnit, setSelectedUnit] = useState<Unit>('g');
+  const [selectedUnit, setSelectedUnit] = useState<Unit>(defaultUnit);
   const [result, setResult] = useState<Calculation | null>(null);
-  const [decimalPrecision, setDecimalPrecision] = useState(3);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    try {
-      const defaultUnit = await AsyncStorage.getItem('defaultUnit');
-      const precision = await AsyncStorage.getItem('decimalPrecision');
-      
-      if (defaultUnit) {
-        setSelectedUnit(defaultUnit as Unit);
-      }
-      if (precision) {
-        setDecimalPrecision(parseInt(precision));
-      }
-    } catch (error) {
-      console.log('Error loading settings:', error);
-    }
-  };
+  React.useEffect(() => {
+    console.log('Calculate screen: Default unit changed to:', defaultUnit);
+    setSelectedUnit(defaultUnit);
+  }, [defaultUnit]);
 
   const handleCalculate = async () => {
     console.log('User tapped CALCULATE button');
@@ -176,7 +162,7 @@ export default function CalculateScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>UNIT</Text>
             <View style={styles.unitSelector}>
-              {UNITS.map((unit, index) => (
+              {UNITS.map((unit) => (
                 <React.Fragment key={unit}>
                   <TouchableOpacity
                     style={[

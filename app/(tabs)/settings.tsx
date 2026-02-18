@@ -1,7 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { colors, typography, spacing } from '@/styles/commonStyles';
-import { Stack } from 'expo-router';
 import {
   View,
   Text,
@@ -9,8 +8,9 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useSettings } from '@/contexts/SettingsContext';
 
 type Unit = 'g' | 'kg' | 'ml' | 'L' | 'oz' | 'lb' | 'pcs';
 type DecimalPrecision = 2 | 3 | 4;
@@ -19,49 +19,18 @@ const UNITS: Unit[] = ['g', 'kg', 'ml', 'L', 'oz', 'lb', 'pcs'];
 const DECIMAL_OPTIONS: DecimalPrecision[] = [2, 3, 4];
 
 export default function SettingsScreen() {
-  const [defaultUnit, setDefaultUnit] = useState<Unit>('g');
-  const [decimalPrecision, setDecimalPrecision] = useState<DecimalPrecision>(3);
+  const { defaultUnit, decimalPrecision, updateDefaultUnit, updateDecimalPrecision } = useSettings();
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    try {
-      const unit = await AsyncStorage.getItem('defaultUnit');
-      const precision = await AsyncStorage.getItem('decimalPrecision');
-
-      if (unit) {
-        setDefaultUnit(unit as Unit);
-      }
-      if (precision) {
-        setDecimalPrecision(parseInt(precision) as DecimalPrecision);
-      }
-    } catch (error) {
-      console.log('Error loading settings:', error);
-    }
-  };
-
-  const saveDefaultUnit = async (unit: Unit) => {
+  const handleUnitChange = async (unit: Unit) => {
     console.log('User selected default unit:', unit);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await AsyncStorage.setItem('defaultUnit', unit);
-      setDefaultUnit(unit);
-    } catch (error) {
-      console.log('Error saving default unit:', error);
-    }
+    await updateDefaultUnit(unit);
   };
 
-  const saveDecimalPrecision = async (precision: DecimalPrecision) => {
+  const handlePrecisionChange = async (precision: DecimalPrecision) => {
     console.log('User selected decimal precision:', precision);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await AsyncStorage.setItem('decimalPrecision', precision.toString());
-      setDecimalPrecision(precision);
-    } catch (error) {
-      console.log('Error saving decimal precision:', error);
-    }
+    await updateDecimalPrecision(precision);
   };
 
   return (
@@ -83,14 +52,14 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>DEFAULT UNIT</Text>
           <View style={styles.card}>
             <View style={styles.unitGrid}>
-              {UNITS.map((unit, index) => (
+              {UNITS.map((unit) => (
                 <React.Fragment key={unit}>
                   <TouchableOpacity
                     style={[
                       styles.unitButton,
                       defaultUnit === unit && styles.unitButtonActive,
                     ]}
-                    onPress={() => saveDefaultUnit(unit)}
+                    onPress={() => handleUnitChange(unit)}
                   >
                     <Text
                       style={[
@@ -111,7 +80,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>DECIMAL PRECISION</Text>
           <View style={styles.card}>
             <View style={styles.precisionRow}>
-              {DECIMAL_OPTIONS.map((precision, index) => {
+              {DECIMAL_OPTIONS.map((precision) => {
                 const exampleText = `e.g. $${(1.23456).toFixed(precision)}`;
                 return (
                   <React.Fragment key={precision}>
@@ -120,7 +89,7 @@ export default function SettingsScreen() {
                         styles.precisionButton,
                         decimalPrecision === precision && styles.precisionButtonActive,
                       ]}
-                      onPress={() => saveDecimalPrecision(precision)}
+                      onPress={() => handlePrecisionChange(precision)}
                     >
                       <Text
                         style={[
