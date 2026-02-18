@@ -105,7 +105,7 @@ export default function HistoryScreen() {
     }
     if (diffDays < 7) {
       const dayText = diffDays === 1 ? 'day' : 'days';
-      return `${dayText} ago`;
+      return `${diffDays} ${dayText} ago`;
     }
     
     const month = date.toLocaleString('default', { month: 'short' });
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 120,
   },
   emptyState: {
     flex: 1,
@@ -332,11 +332,12 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     ...typography.title,
-    fontSize: 24,
+    fontSize: 26,
     marginBottom: spacing.sm,
   },
   emptyStateText: {
     ...typography.body,
+    fontSize: 18,
     color: colors.textSecondary,
     textAlign: 'center',
   },
@@ -366,22 +367,22 @@ const styles = StyleSheet.create({
   },
   historyType: {
     ...typography.label,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.primary,
   },
   historyDate: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
     color: colors.textSecondary,
   },
   historyCalculation: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.xs,
   },
   historyResult: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.primary,
   },
@@ -394,18 +395,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   comparisonLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,
     marginBottom: 2,
   },
   comparisonPrice: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.text,
   },
   comparisonUnit: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
     color: colors.textSecondary,
   },
@@ -413,53 +414,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   comparisonVsText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
   },
   savingsBadge: {
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.xs + 4,
     borderRadius: 8,
     alignSelf: 'flex-start',
   },
   savingsText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   deleteButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.inputBackground,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: spacing.sm,
   },
   deleteButtonText: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '400',
     color: colors.textSecondary,
-    lineHeight: 28,
+    lineHeight: 30,
   },
   footer: {
     padding: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xl + 60,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   clearAllButton: {
     backgroundColor: colors.inputBackground,
     borderRadius: 16,
-    padding: spacing.md + 4,
+    padding: spacing.md + 6,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.border,
   },
   clearAllButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: colors.textSecondary,
   },
@@ -480,14 +481,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: colors.text,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   modalText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '500',
     color: colors.textSecondary,
     marginBottom: spacing.lg,
@@ -499,7 +500,7 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    padding: spacing.md + 4,
+    padding: spacing.md + 6,
     borderRadius: 16,
     alignItems: 'center',
   },
@@ -512,12 +513,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error,
   },
   modalButtonTextCancel: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: colors.text,
   },
   modalButtonTextDelete: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
   },

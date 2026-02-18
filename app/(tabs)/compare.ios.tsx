@@ -352,14 +352,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 120,
   },
   header: {
     marginBottom: spacing.lg,
   },
   subtitle: {
     ...typography.subtitle,
-    fontSize: 17,
+    fontSize: 18,
     color: colors.textSecondary,
   },
   card: {
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   },
   productLabel: {
     ...typography.label,
-    fontSize: 15,
+    fontSize: 16,
     color: colors.primary,
   },
   inputGroup: {
@@ -388,13 +388,14 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.label,
+    fontSize: 15,
     marginBottom: spacing.sm,
   },
   input: {
     backgroundColor: colors.inputBackground,
     borderRadius: 16,
-    padding: spacing.md + 4,
-    fontSize: 20,
+    padding: spacing.md + 6,
+    fontSize: 22,
     fontWeight: '600',
     color: colors.text,
     borderWidth: 2,
@@ -406,13 +407,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   unitButton: {
-    paddingHorizontal: spacing.md + 4,
-    paddingVertical: spacing.sm + 4,
+    paddingHorizontal: spacing.md + 6,
+    paddingVertical: spacing.sm + 6,
     borderRadius: 12,
     backgroundColor: colors.inputBackground,
     borderWidth: 2,
     borderColor: colors.border,
-    minWidth: 60,
+    minWidth: 68,
     alignItems: 'center',
   },
   unitButtonActive: {
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   unitButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: colors.textSecondary,
   },
@@ -430,7 +431,7 @@ const styles = StyleSheet.create({
   compareButton: {
     backgroundColor: colors.primary,
     borderRadius: 16,
-    padding: spacing.md + 4,
+    padding: spacing.md + 8,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.primary,
@@ -441,7 +442,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   compareButtonText: {
-    fontSize: 17,
+    fontSize: 19,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.5,
@@ -450,9 +451,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   resultCard: {
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.card,
     borderRadius: 20,
-    padding: spacing.lg,
+    padding: spacing.lg + 4,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.border,
@@ -470,29 +471,30 @@ const styles = StyleSheet.create({
   },
   resultProductLabel: {
     ...typography.label,
+    fontSize: 15,
     marginBottom: spacing.sm,
   },
   resultPrice: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: '700',
     color: colors.text,
     letterSpacing: -1,
     marginBottom: spacing.xs,
   },
   resultUnit: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '500',
     color: colors.textSecondary,
   },
   cheaperBadge: {
     marginTop: spacing.md,
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md + 4,
+    paddingVertical: spacing.sm + 2,
     borderRadius: 12,
   },
   cheaperBadgeText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.5,
@@ -509,19 +511,19 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   savingsLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: 'rgba(255, 255, 255, 0.8)',
     letterSpacing: 1,
     marginBottom: spacing.sm,
   },
   savingsText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '500',
     color: '#FFFFFF',
   },
   savingsPercentage: {
-    fontSize: 56,
+    fontSize: 60,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: -2,

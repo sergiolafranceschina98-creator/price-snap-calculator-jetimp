@@ -134,13 +134,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 120,
   },
   section: {
     marginBottom: spacing.xl,
   },
   sectionTitle: {
     ...typography.label,
+    fontSize: 15,
     marginBottom: spacing.md,
   },
   card: {
@@ -161,13 +162,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   unitButton: {
-    paddingHorizontal: spacing.md + 4,
-    paddingVertical: spacing.sm + 4,
+    paddingHorizontal: spacing.md + 6,
+    paddingVertical: spacing.sm + 6,
     borderRadius: 12,
     backgroundColor: colors.inputBackground,
     borderWidth: 2,
     borderColor: colors.border,
-    minWidth: 60,
+    minWidth: 68,
     alignItems: 'center',
   },
   unitButtonActive: {
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   unitButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: colors.textSecondary,
   },
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
   },
   precisionButton: {
     flex: 1,
-    padding: spacing.md,
+    padding: spacing.md + 4,
     borderRadius: 14,
     backgroundColor: colors.inputBackground,
     borderWidth: 2,
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   precisionButtonText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: colors.text,
     marginBottom: spacing.xs,
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   precisionExample: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
     color: colors.textSecondary,
   },
@@ -224,13 +225,13 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   footerText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: colors.textSecondary,
     marginBottom: spacing.xs,
   },
   footerSubtext: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '400',
     color: colors.textSecondary,
   },
