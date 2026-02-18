@@ -42,7 +42,7 @@ export default function CompareScreen() {
   const [unitB, setUnitB] = useState<Unit>('g');
 
   const [result, setResult] = useState<ComparisonResult | null>(null);
-  const [decimalPrecision, setDecimalPrecision] = useState(4);
+  const [decimalPrecision, setDecimalPrecision] = useState(3);
 
   useEffect(() => {
     loadSettings();
@@ -50,7 +50,13 @@ export default function CompareScreen() {
 
   const loadSettings = async () => {
     try {
+      const defaultUnit = await AsyncStorage.getItem('defaultUnit');
       const precision = await AsyncStorage.getItem('decimalPrecision');
+      
+      if (defaultUnit) {
+        setUnitA(defaultUnit as Unit);
+        setUnitB(defaultUnit as Unit);
+      }
       if (precision) {
         setDecimalPrecision(parseInt(precision));
       }
@@ -61,6 +67,11 @@ export default function CompareScreen() {
 
   const handleCompare = () => {
     console.log('User tapped COMPARE NOW button');
+    
+    if (!priceA || !quantityA || !priceB || !quantityB) {
+      console.log('Missing input values');
+      return;
+    }
 
     const priceANum = parseFloat(priceA);
     const quantityANum = parseFloat(quantityA);
@@ -68,16 +79,14 @@ export default function CompareScreen() {
     const quantityBNum = parseFloat(quantityB);
 
     if (
-      !priceANum ||
-      !quantityANum ||
-      !priceBNum ||
-      !quantityBNum ||
-      priceANum <= 0 ||
-      quantityANum <= 0 ||
-      priceBNum <= 0 ||
-      quantityBNum <= 0
+      isNaN(priceANum) ||
+      isNaN(quantityANum) ||
+      isNaN(priceBNum) ||
+      isNaN(quantityBNum) ||
+      quantityANum === 0 ||
+      quantityBNum === 0
     ) {
-      console.log('Invalid input - one or more values are zero or negative');
+      console.log('Invalid input values');
       return;
     }
 
@@ -92,7 +101,7 @@ export default function CompareScreen() {
         ? ((pricePerUnitB - pricePerUnitA) / pricePerUnitB) * 100
         : ((pricePerUnitA - pricePerUnitB) / pricePerUnitA) * 100;
 
-    const comparisonResult: ComparisonResult = {
+    setResult({
       productA: {
         pricePerUnit: pricePerUnitA,
         isCheaper: cheaperProduct === 'A',
@@ -103,15 +112,12 @@ export default function CompareScreen() {
       },
       percentageDiff,
       cheaperProduct,
-    };
-
-    setResult(comparisonResult);
-    console.log('Comparison result:', comparisonResult);
+    });
   };
 
   const handleUnitSelect = (product: 'A' | 'B', unit: Unit) => {
-    console.log(`User selected unit ${unit} for Product ${product}`);
-    Haptics.selectionAsync();
+    console.log('User selected unit for product', product, ':', unit);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (product === 'A') {
       setUnitA(unit);
     } else {
@@ -123,189 +129,196 @@ export default function CompareScreen() {
     return price.toFixed(decimalPrecision);
   };
 
-  const priceAFormatted = result ? formatPrice(result.productA.pricePerUnit) : '';
-  const priceBFormatted = result ? formatPrice(result.productB.pricePerUnit) : '';
-  const percentageText = result ? `${result.percentageDiff.toFixed(1)}%` : '';
-  const cheaperText = result ? `Product ${result.cheaperProduct}` : '';
+  const productAPrice = result ? formatPrice(result.productA.pricePerUnit) : '';
+  const productBPrice = result ? formatPrice(result.productB.pricePerUnit) : '';
+  const percentageDiffText = result ? result.percentageDiff.toFixed(0) : '';
+  const cheaperProductText = result ? (result.cheaperProduct === 'A' ? 'Product A' : 'Product B') : '';
 
   return (
-    <>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <Stack.Screen
         options={{
           headerShown: true,
           title: 'Compare',
           headerLargeTitle: true,
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTintColor: colors.text,
         }}
       />
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.header}>Compare Two Products</Text>
+        <View style={styles.header}>
+          <Text style={styles.subtitle}>Find the better deal</Text>
+        </View>
 
-          <View style={styles.productCard}>
-            <Text style={styles.productLabel}>Product A</Text>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Price</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 4.99"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="decimal-pad"
-                value={priceA}
-                onChangeText={setPriceA}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Quantity</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 500"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="decimal-pad"
-                value={quantityA}
-                onChangeText={setQuantityA}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Unit</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.unitSelector}
-              >
-                {UNITS.map((unit) => {
-                  const isSelected = unitA === unit;
-                  return (
-                    <TouchableOpacity
-                      key={unit}
-                      style={[
-                        styles.unitButton,
-                        isSelected && styles.unitButtonSelected,
-                      ]}
-                      onPress={() => handleUnitSelect('A', unit)}
-                    >
-                      <Text
-                        style={[
-                          styles.unitButtonText,
-                          isSelected && styles.unitButtonTextSelected,
-                        ]}
-                      >
-                        {unit}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
+        <View style={styles.card}>
+          <View style={styles.productHeader}>
+            <Text style={styles.productLabel}>PRODUCT A</Text>
           </View>
 
-          <View style={styles.productCard}>
-            <Text style={styles.productLabel}>Product B</Text>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Price</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 3.99"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="decimal-pad"
-                value={priceB}
-                onChangeText={setPriceB}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Quantity</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 400"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="decimal-pad"
-                value={quantityB}
-                onChangeText={setQuantityB}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Unit</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.unitSelector}
-              >
-                {UNITS.map((unit) => {
-                  const isSelected = unitB === unit;
-                  return (
-                    <TouchableOpacity
-                      key={unit}
-                      style={[
-                        styles.unitButton,
-                        isSelected && styles.unitButtonSelected,
-                      ]}
-                      onPress={() => handleUnitSelect('B', unit)}
-                    >
-                      <Text
-                        style={[
-                          styles.unitButtonText,
-                          isSelected && styles.unitButtonTextSelected,
-                        ]}
-                      >
-                        {unit}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>PRICE</Text>
+            <TextInput
+              style={styles.input}
+              value={priceA}
+              onChangeText={setPriceA}
+              placeholder="e.g. 4.99"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="decimal-pad"
+            />
           </View>
 
-          <TouchableOpacity style={styles.compareButton} onPress={handleCompare}>
-            <Text style={styles.compareButtonText}>COMPARE NOW</Text>
-          </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>QUANTITY</Text>
+            <TextInput
+              style={styles.input}
+              value={quantityA}
+              onChangeText={setQuantityA}
+              placeholder="e.g. 500"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="decimal-pad"
+            />
+          </View>
 
-          {result && (
-            <View style={styles.resultSection}>
-              <View
-                style={[
-                  styles.resultCard,
-                  result.productA.isCheaper
-                    ? styles.resultCardCheaper
-                    : styles.resultCardExpensive,
-                ]}
-              >
-                <Text style={styles.resultProductLabel}>Product A</Text>
-                <Text style={styles.resultPrice}>
-                  ${priceAFormatted} per {unitA}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.resultCard,
-                  result.productB.isCheaper
-                    ? styles.resultCardCheaper
-                    : styles.resultCardExpensive,
-                ]}
-              >
-                <Text style={styles.resultProductLabel}>Product B</Text>
-                <Text style={styles.resultPrice}>
-                  ${priceBFormatted} per {unitB}
-                </Text>
-              </View>
-
-              <View style={styles.savingsCard}>
-                <Text style={styles.savingsIcon}>✅</Text>
-                <Text style={styles.savingsText}>
-                  {cheaperText} is {percentageText} cheaper
-                </Text>
-              </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>UNIT</Text>
+            <View style={styles.unitSelector}>
+              {UNITS.map((unit, index) => (
+                <React.Fragment key={unit}>
+                  <TouchableOpacity
+                    style={[
+                      styles.unitButton,
+                      unitA === unit && styles.unitButtonActive,
+                    ]}
+                    onPress={() => handleUnitSelect('A', unit)}
+                  >
+                    <Text
+                      style={[
+                        styles.unitButtonText,
+                        unitA === unit && styles.unitButtonTextActive,
+                      ]}
+                    >
+                      {unit}
+                    </Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ))}
             </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.productHeader}>
+            <Text style={styles.productLabel}>PRODUCT B</Text>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>PRICE</Text>
+            <TextInput
+              style={styles.input}
+              value={priceB}
+              onChangeText={setPriceB}
+              placeholder="e.g. 3.99"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="decimal-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>QUANTITY</Text>
+            <TextInput
+              style={styles.input}
+              value={quantityB}
+              onChangeText={setQuantityB}
+              placeholder="e.g. 400"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="decimal-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>UNIT</Text>
+            <View style={styles.unitSelector}>
+              {UNITS.map((unit, index) => (
+                <React.Fragment key={unit}>
+                  <TouchableOpacity
+                    style={[
+                      styles.unitButton,
+                      unitB === unit && styles.unitButtonActive,
+                    ]}
+                    onPress={() => handleUnitSelect('B', unit)}
+                  >
+                    <Text
+                      style={[
+                        styles.unitButtonText,
+                        unitB === unit && styles.unitButtonTextActive,
+                      ]}
+                    >
+                      {unit}
+                    </Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.compareButton} onPress={handleCompare}>
+          <Text style={styles.compareButtonText}>COMPARE NOW</Text>
+        </TouchableOpacity>
+
+        {result && (
+          <View style={styles.resultSection}>
+            <View
+              style={[
+                styles.resultCard,
+                result.productA.isCheaper && styles.resultCardCheaper,
+              ]}
+            >
+              <Text style={styles.resultProductLabel}>Product A</Text>
+              <Text style={styles.resultPrice}>${productAPrice}</Text>
+              <Text style={styles.resultUnit}>per {unitA}</Text>
+              {result.productA.isCheaper && (
+                <View style={styles.cheaperBadge}>
+                  <Text style={styles.cheaperBadgeText}>✓ CHEAPER</Text>
+                </View>
+              )}
+            </View>
+
+            <View
+              style={[
+                styles.resultCard,
+                result.productB.isCheaper && styles.resultCardCheaper,
+              ]}
+            >
+              <Text style={styles.resultProductLabel}>Product B</Text>
+              <Text style={styles.resultPrice}>${productBPrice}</Text>
+              <Text style={styles.resultUnit}>per {unitB}</Text>
+              {result.productB.isCheaper && (
+                <View style={styles.cheaperBadge}>
+                  <Text style={styles.cheaperBadgeText}>✓ CHEAPER</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.savingsCard}>
+              <Text style={styles.savingsLabel}>SAVINGS</Text>
+              <Text style={styles.savingsText}>{cheaperProductText} is</Text>
+              <Text style={styles.savingsPercentage}>{percentageDiffText}%</Text>
+              <Text style={styles.savingsText}>cheaper</Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -314,30 +327,41 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   header: {
-    ...typography.heading,
     marginBottom: spacing.lg,
-    textAlign: 'center',
   },
-  productCard: {
+  subtitle: {
+    ...typography.subtitle,
+    fontSize: 17,
+    color: colors.textSecondary,
+  },
+  card: {
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: 24,
     padding: spacing.lg,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: colors.shadowDark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     marginBottom: spacing.lg,
+  },
+  productHeader: {
+    marginBottom: spacing.md,
   },
   productLabel: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.md,
+    ...typography.label,
+    fontSize: 15,
+    color: colors.secondary,
   },
   inputGroup: {
     marginBottom: spacing.md,
@@ -348,27 +372,30 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.inputBackground,
-    borderRadius: 12,
-    padding: spacing.md,
-    fontSize: 18,
+    borderRadius: 16,
+    padding: spacing.md + 4,
+    fontSize: 20,
     fontWeight: '600',
     color: colors.text,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
   },
   unitSelector: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   unitButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 20,
+    paddingHorizontal: spacing.md + 4,
+    paddingVertical: spacing.sm + 4,
+    borderRadius: 12,
     backgroundColor: colors.inputBackground,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
+    minWidth: 60,
+    alignItems: 'center',
   },
-  unitButtonSelected: {
+  unitButtonActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
@@ -377,62 +404,107 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
-  unitButtonTextSelected: {
+  unitButtonTextActive: {
     color: '#FFFFFF',
   },
   compareButton: {
-    backgroundColor: colors.secondary,
-    borderRadius: 12,
-    padding: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    padding: spacing.md + 4,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
     marginBottom: spacing.lg,
   },
   compareButtonText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   resultSection: {
     gap: spacing.md,
   },
   resultCard: {
-    borderRadius: 16,
-    padding: spacing.lg,
-    borderWidth: 3,
-  },
-  resultCardCheaper: {
-    backgroundColor: '#ECFDF5',
-    borderColor: colors.cheaper,
-  },
-  resultCardExpensive: {
-    backgroundColor: '#FEF2F2',
-    borderColor: colors.expensive,
-  },
-  resultProductLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  resultPrice: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  savingsCard: {
-    backgroundColor: colors.success,
-    borderRadius: 16,
+    backgroundColor: colors.card,
+    borderRadius: 20,
     padding: spacing.lg,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  savingsIcon: {
-    fontSize: 32,
+  resultCardCheaper: {
+    backgroundColor: colors.highlight,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.15,
+  },
+  resultProductLabel: {
+    ...typography.label,
+    marginBottom: spacing.sm,
+  },
+  resultPrice: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -1,
+    marginBottom: spacing.xs,
+  },
+  resultUnit: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  cheaperBadge: {
+    marginTop: spacing.md,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 12,
+  },
+  cheaperBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  savingsCard: {
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    padding: spacing.xl,
+    alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  savingsLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.8)',
+    letterSpacing: 1,
     marginBottom: spacing.sm,
   },
   savingsText: {
-    fontSize: 20,
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  savingsPercentage: {
+    fontSize: 56,
     fontWeight: '700',
     color: '#FFFFFF',
-    textAlign: 'center',
+    letterSpacing: -2,
+    marginVertical: spacing.xs,
   },
 });

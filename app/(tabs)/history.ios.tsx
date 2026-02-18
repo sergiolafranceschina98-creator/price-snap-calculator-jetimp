@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
+import { colors, typography, spacing } from '@/styles/commonStyles';
+import { Stack } from 'expo-router';
 import {
   View,
   Text,
@@ -8,8 +10,6 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
-import { colors, typography, spacing } from '@/styles/commonStyles';
-import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
@@ -25,8 +25,8 @@ interface HistoryItem {
 export default function HistoryScreen() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [clearAllModalVisible, setClearAllModalVisible] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -34,7 +34,7 @@ export default function HistoryScreen() {
 
   const loadHistory = async () => {
     try {
-      const historyJson = await AsyncStorage.getItem('history');
+      const historyJson = await AsyncStorage.getItem('calculationHistory');
       if (historyJson) {
         const parsedHistory = JSON.parse(historyJson);
         setHistory(parsedHistory);
@@ -46,46 +46,47 @@ export default function HistoryScreen() {
   };
 
   const deleteItem = async (id: string) => {
-    console.log('Deleting history item:', id);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     try {
       const newHistory = history.filter((item) => item.id !== id);
+      await AsyncStorage.setItem('calculationHistory', JSON.stringify(newHistory));
       setHistory(newHistory);
-      await AsyncStorage.setItem('history', JSON.stringify(newHistory));
-      console.log('Item deleted successfully');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      console.log('Deleted history item:', id);
     } catch (error) {
       console.log('Error deleting item:', error);
     }
   };
 
   const clearAllHistory = async () => {
-    console.log('Clearing all history');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
     try {
+      await AsyncStorage.removeItem('calculationHistory');
       setHistory([]);
-      await AsyncStorage.setItem('history', JSON.stringify([]));
-      console.log('All history cleared');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      console.log('Cleared all history');
     } catch (error) {
       console.log('Error clearing history:', error);
     }
   };
 
   const formatDate = (timestamp: number) => {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
-    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
   };
 
   const handleDeletePress = (id: string) => {
+    console.log('User tapped delete for item:', id);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setItemToDelete(id);
     setDeleteModalVisible(true);
   };
@@ -99,6 +100,8 @@ export default function HistoryScreen() {
   };
 
   const handleClearAllPress = () => {
+    console.log('User tapped Clear All History');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setClearAllModalVisible(true);
   };
 
@@ -108,120 +111,121 @@ export default function HistoryScreen() {
   };
 
   return (
-    <>
+    <View style={styles.container}>
       <Stack.Screen
         options={{
           headerShown: false,
         }}
       />
-      <View style={styles.container}>
-        {history.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No calculations yet</Text>
-            <Text style={styles.emptySubtext}>
-              Your calculation history will appear here
-            </Text>
-          </View>
-        ) : (
-          <>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-              {history.map((item) => {
-                const dateText = formatDate(item.timestamp);
-                const priceText = `$${item.price.toFixed(2)}`;
-                const quantityText = `${item.quantity}${item.unit}`;
-                const resultText = `$${item.pricePerUnit.toFixed(4)} per ${item.unit}`;
 
-                return (
-                  <View key={item.id} style={styles.historyItem}>
+      {history.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateTitle}>No History Yet</Text>
+          <Text style={styles.emptyStateText}>
+            Your calculations will appear here
+          </Text>
+        </View>
+      ) : (
+        <>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+            {history.map((item, index) => {
+              const formattedDate = formatDate(item.timestamp);
+              const priceText = `$${item.price.toFixed(2)}`;
+              const quantityText = `${item.quantity}${item.unit}`;
+              const resultText = `$${item.pricePerUnit.toFixed(3)} per ${item.unit}`;
+
+              return (
+                <React.Fragment key={item.id}>
+                  <View style={styles.historyCard}>
                     <View style={styles.historyContent}>
-                      <View style={styles.historyRow}>
-                        <Text style={styles.historyPrice}>{priceText}</Text>
+                      <View style={styles.historyHeader}>
+                        <Text style={styles.historyInput}>{priceText}</Text>
                         <Text style={styles.historySeparator}>/</Text>
-                        <Text style={styles.historyQuantity}>{quantityText}</Text>
+                        <Text style={styles.historyInput}>{quantityText}</Text>
                       </View>
                       <Text style={styles.historyResult}>{resultText}</Text>
-                      <Text style={styles.historyDate}>{dateText}</Text>
+                      <Text style={styles.historyDate}>{formattedDate}</Text>
                     </View>
                     <TouchableOpacity
                       style={styles.deleteButton}
                       onPress={() => handleDeletePress(item.id)}
                     >
-                      <Text style={styles.deleteButtonText}>✕</Text>
+                      <Text style={styles.deleteButtonText}>×</Text>
                     </TouchableOpacity>
                   </View>
-                );
-              })}
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.clearAllButton}
-              onPress={handleClearAllPress}
-            >
-              <Text style={styles.clearAllButtonText}>Clear All History</Text>
+                </React.Fragment>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.clearButton} onPress={handleClearAllPress}>
+              <Text style={styles.clearButtonText}>Clear All History</Text>
             </TouchableOpacity>
-          </>
-        )}
+          </View>
+        </>
+      )}
 
-        <Modal
-          visible={deleteModalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setDeleteModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Delete Item?</Text>
-              <Text style={styles.modalMessage}>
-                Are you sure you want to delete this calculation?
-              </Text>
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonCancel]}
-                  onPress={() => setDeleteModalVisible(false)}
-                >
-                  <Text style={styles.modalButtonTextCancel}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonConfirm]}
-                  onPress={confirmDelete}
-                >
-                  <Text style={styles.modalButtonTextConfirm}>Delete</Text>
-                </TouchableOpacity>
-              </View>
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Delete Item?</Text>
+            <Text style={styles.modalText}>
+              This calculation will be removed from your history.
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setDeleteModalVisible(false)}
+              >
+                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={confirmDelete}
+              >
+                <Text style={styles.modalButtonTextConfirm}>Delete</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </View>
+      </Modal>
 
-        <Modal
-          visible={clearAllModalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setClearAllModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Clear All History?</Text>
-              <Text style={styles.modalMessage}>
-                This will permanently delete all your calculation history.
-              </Text>
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonCancel]}
-                  onPress={() => setClearAllModalVisible(false)}
-                >
-                  <Text style={styles.modalButtonTextCancel}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonConfirm]}
-                  onPress={confirmClearAll}
-                >
-                  <Text style={styles.modalButtonTextConfirm}>Clear All</Text>
-                </TouchableOpacity>
-              </View>
+      <Modal
+        visible={clearAllModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setClearAllModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Clear All History?</Text>
+            <Text style={styles.modalText}>
+              All your calculation history will be permanently deleted.
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setClearAllModalVisible(false)}
+              >
+                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={confirmClearAll}
+              >
+                <Text style={styles.modalButtonTextConfirm}>Clear All</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-      </View>
-    </>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -229,10 +233,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: 48,
+    paddingTop: spacing.xxl + spacing.lg,
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   emptyState: {
     flex: 1,
@@ -240,36 +248,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
-  emptyText: {
+  emptyStateTitle: {
     ...typography.heading,
+    fontSize: 24,
     marginBottom: spacing.sm,
   },
-  emptySubtext: {
-    ...typography.subtitle,
+  emptyStateText: {
+    ...typography.body,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
-  historyItem: {
+  historyCard: {
     backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: spacing.md,
+    borderRadius: 20,
+    padding: spacing.lg,
     marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 2,
+    justifyContent: 'space-between',
+    shadowColor: colors.shadowDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   historyContent: {
     flex: 1,
   },
-  historyRow: {
+  historyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
-  historyPrice: {
+  historyInput: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
@@ -278,86 +291,103 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '400',
     color: colors.textSecondary,
-    marginHorizontal: spacing.xs,
-  },
-  historyQuantity: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
+    marginHorizontal: spacing.sm,
   },
   historyResult: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     color: colors.primary,
     marginBottom: spacing.xs,
   },
   historyDate: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '400',
     color: colors.textSecondary,
   },
   deleteButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.error,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.inputBackground,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: spacing.sm,
+    marginLeft: spacing.md,
   },
   deleteButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '300',
+    color: colors.error,
+    lineHeight: 28,
   },
-  clearAllButton: {
+  footer: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  clearButton: {
     backgroundColor: colors.error,
-    borderRadius: 12,
-    padding: spacing.md,
-    margin: spacing.lg,
+    borderRadius: 16,
+    padding: spacing.md + 4,
     alignItems: 'center',
+    shadowColor: colors.error,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  clearAllButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  clearButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,
   },
   modalContent: {
     backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: spacing.lg,
+    borderRadius: 24,
+    padding: spacing.xl,
     width: '100%',
     maxWidth: 400,
+    shadowColor: colors.shadowDark,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 8,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
+    ...typography.heading,
+    fontSize: 22,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
-  modalMessage: {
-    fontSize: 16,
+  modalText: {
+    ...typography.body,
     color: colors.textSecondary,
-    marginBottom: spacing.lg,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   modalButton: {
     flex: 1,
-    borderRadius: 12,
-    padding: spacing.md,
+    padding: spacing.md + 2,
+    borderRadius: 14,
     alignItems: 'center',
   },
   modalButtonCancel: {
     backgroundColor: colors.inputBackground,
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   modalButtonConfirm: {
     backgroundColor: colors.error,

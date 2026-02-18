@@ -32,7 +32,7 @@ export default function CalculateScreen() {
   const [quantity, setQuantity] = useState('');
   const [selectedUnit, setSelectedUnit] = useState<Unit>('g');
   const [result, setResult] = useState<Calculation | null>(null);
-  const [decimalPrecision, setDecimalPrecision] = useState(4);
+  const [decimalPrecision, setDecimalPrecision] = useState(3);
 
   useEffect(() => {
     loadSettings();
@@ -57,18 +57,23 @@ export default function CalculateScreen() {
   const handleCalculate = async () => {
     console.log('User tapped CALCULATE button');
     
+    if (!price || !quantity) {
+      console.log('Missing price or quantity');
+      return;
+    }
+
     const priceNum = parseFloat(price);
     const quantityNum = parseFloat(quantity);
 
-    if (!priceNum || !quantityNum || priceNum <= 0 || quantityNum <= 0) {
-      console.log('Invalid input - price or quantity is zero or negative');
+    if (isNaN(priceNum) || isNaN(quantityNum) || quantityNum === 0) {
+      console.log('Invalid input values');
       return;
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const pricePerUnit = priceNum / quantityNum;
-    
+
     const calculation: Calculation = {
       price: priceNum,
       quantity: quantityNum,
@@ -78,23 +83,25 @@ export default function CalculateScreen() {
     };
 
     setResult(calculation);
-    console.log('Calculation result:', calculation);
 
-    // Save to history
     try {
-      const historyJson = await AsyncStorage.getItem('history');
+      const historyJson = await AsyncStorage.getItem('calculationHistory');
       const history = historyJson ? JSON.parse(historyJson) : [];
       
       const newHistory = [
         {
           id: Date.now().toString(),
-          ...calculation,
+          price: priceNum,
+          quantity: quantityNum,
+          unit: selectedUnit,
+          pricePerUnit,
+          timestamp: Date.now(),
         },
         ...history,
-      ].slice(0, 20); // Keep only last 20
+      ].slice(0, 20);
 
-      await AsyncStorage.setItem('history', JSON.stringify(newHistory));
-      console.log('Saved to history');
+      await AsyncStorage.setItem('calculationHistory', JSON.stringify(newHistory));
+      console.log('Calculation saved to history');
     } catch (error) {
       console.log('Error saving to history:', error);
     }
@@ -102,7 +109,7 @@ export default function CalculateScreen() {
 
   const handleUnitSelect = (unit: Unit) => {
     console.log('User selected unit:', unit);
-    Haptics.selectionAsync();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedUnit(unit);
   };
 
@@ -110,131 +117,106 @@ export default function CalculateScreen() {
     if (!result) return '';
     
     const formattedPrice = result.pricePerUnit.toFixed(decimalPrecision);
-    return `$${formattedPrice} per ${result.unit}`;
+    return formattedPrice;
   };
 
-  const resultText = formatResult();
+  const resultPrice = formatResult();
+  const resultUnit = result ? result.unit : '';
 
   return (
-    <>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <Stack.Screen
         options={{
           headerShown: true,
           title: 'PriceSnap',
           headerLargeTitle: true,
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTintColor: colors.text,
         }}
       />
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>PriceSnap</Text>
-            <Text style={styles.subtitle}>Know the real price instantly</Text>
+        <View style={styles.header}>
+          <Text style={styles.subtitle}>Know the real price instantly</Text>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>PRICE</Text>
+            <TextInput
+              style={styles.input}
+              value={price}
+              onChangeText={setPrice}
+              placeholder="e.g. 4.99"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="decimal-pad"
+            />
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Price</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 4.99"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="decimal-pad"
-                value={price}
-                onChangeText={setPrice}
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>QUANTITY</Text>
+            <TextInput
+              style={styles.input}
+              value={quantity}
+              onChangeText={setQuantity}
+              placeholder="e.g. 500"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="decimal-pad"
+            />
+          </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Quantity</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 500"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="decimal-pad"
-                value={quantity}
-                onChangeText={setQuantity}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Unit</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.unitSelector}
-              >
-                {UNITS.map((unit) => {
-                  const isSelected = selectedUnit === unit;
-                  return (
-                    <TouchableOpacity
-                      key={unit}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>UNIT</Text>
+            <View style={styles.unitSelector}>
+              {UNITS.map((unit, index) => (
+                <React.Fragment key={unit}>
+                  <TouchableOpacity
+                    style={[
+                      styles.unitButton,
+                      selectedUnit === unit && styles.unitButtonActive,
+                    ]}
+                    onPress={() => handleUnitSelect(unit)}
+                  >
+                    <Text
                       style={[
-                        styles.unitButton,
-                        isSelected && styles.unitButtonSelected,
+                        styles.unitButtonText,
+                        selectedUnit === unit && styles.unitButtonTextActive,
                       ]}
-                      onPress={() => handleUnitSelect(unit)}
                     >
-                      <Text
-                        style={[
-                          styles.unitButtonText,
-                          isSelected && styles.unitButtonTextSelected,
-                        ]}
-                      >
-                        {unit}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+                      {unit}
+                    </Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ))}
             </View>
           </View>
+        </View>
 
-          <TouchableOpacity style={styles.calculateButton} onPress={handleCalculate}>
-            <Text style={styles.calculateButtonText}>CALCULATE</Text>
-          </TouchableOpacity>
+        <TouchableOpacity style={styles.calculateButton} onPress={handleCalculate}>
+          <Text style={styles.calculateButtonText}>CALCULATE</Text>
+        </TouchableOpacity>
 
-          {result && (
-            <View style={styles.resultCard}>
-              <Text style={styles.resultValue}>{resultText}</Text>
-              <Text style={styles.resultLabel}>Cost per unit</Text>
+        {result && (
+          <View style={styles.resultCard}>
+            <View style={styles.resultHeader}>
+              <Text style={styles.resultLabel}>COST PER UNIT</Text>
             </View>
-          )}
-
-          <View style={styles.shortcutRow}>
-            <TouchableOpacity
-              style={styles.shortcutChip}
-              onPress={() => handleUnitSelect('g')}
-            >
-              <Text style={styles.shortcutText}>Grocery</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.shortcutChip}
-              onPress={() => handleUnitSelect('kg')}
-            >
-              <Text style={styles.shortcutText}>Protein</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.shortcutChip}
-              onPress={() => handleUnitSelect('L')}
-            >
-              <Text style={styles.shortcutText}>Fuel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.shortcutChip}
-              onPress={() => handleUnitSelect('pcs')}
-            >
-              <Text style={styles.shortcutText}>Bulk Pack</Text>
-            </TouchableOpacity>
+            <View style={styles.resultContent}>
+              <Text style={styles.resultPrice}>${resultPrice}</Text>
+              <Text style={styles.resultUnit}>per {resultUnit}</Text>
+            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -243,29 +225,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  title: {
-    ...typography.title,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.lg,
   },
   subtitle: {
     ...typography.subtitle,
+    fontSize: 17,
+    color: colors.textSecondary,
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: 24,
     padding: spacing.lg,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: colors.shadowDark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     marginBottom: spacing.lg,
   },
   inputGroup: {
@@ -277,27 +262,30 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.inputBackground,
-    borderRadius: 12,
-    padding: spacing.md,
-    fontSize: 18,
+    borderRadius: 16,
+    padding: spacing.md + 4,
+    fontSize: 20,
     fontWeight: '600',
     color: colors.text,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
   },
   unitSelector: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   unitButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 20,
+    paddingHorizontal: spacing.md + 4,
+    paddingVertical: spacing.sm + 4,
+    borderRadius: 12,
     backgroundColor: colors.inputBackground,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
+    minWidth: 60,
+    alignItems: 'center',
   },
-  unitButtonSelected: {
+  unitButtonActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
@@ -306,51 +294,59 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
-  unitButtonTextSelected: {
+  unitButtonTextActive: {
     color: '#FFFFFF',
   },
   calculateButton: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: spacing.md,
+    borderRadius: 16,
+    padding: spacing.md + 4,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
     marginBottom: spacing.lg,
   },
   calculateButtonText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   resultCard: {
     backgroundColor: colors.highlight,
-    borderRadius: 16,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginBottom: spacing.lg,
+    borderRadius: 24,
+    padding: spacing.xl,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  resultValue: {
-    ...typography.result,
-    marginBottom: spacing.xs,
+  resultHeader: {
+    marginBottom: spacing.md,
   },
   resultLabel: {
     ...typography.label,
+    color: colors.primary,
   },
-  shortcutRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    justifyContent: 'center',
+  resultContent: {
+    alignItems: 'center',
   },
-  shortcutChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 20,
-    backgroundColor: colors.inputBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
+  resultPrice: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -1.5,
+    marginBottom: spacing.xs,
   },
-  shortcutText: {
-    fontSize: 14,
+  resultUnit: {
+    fontSize: 18,
     fontWeight: '500',
     color: colors.textSecondary,
   },
