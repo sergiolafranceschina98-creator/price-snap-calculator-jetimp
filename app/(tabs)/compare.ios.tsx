@@ -65,7 +65,7 @@ export default function CompareScreen() {
     }
   };
 
-  const handleCompare = () => {
+  const handleCompare = async () => {
     console.log('User tapped COMPARE NOW button');
     
     if (!priceA || !quantityA || !priceB || !quantityB) {
@@ -101,7 +101,7 @@ export default function CompareScreen() {
         ? ((pricePerUnitB - pricePerUnitA) / pricePerUnitB) * 100
         : ((pricePerUnitA - pricePerUnitB) / pricePerUnitA) * 100;
 
-    setResult({
+    const comparisonResult = {
       productA: {
         pricePerUnit: pricePerUnitA,
         isCheaper: cheaperProduct === 'A',
@@ -112,7 +112,41 @@ export default function CompareScreen() {
       },
       percentageDiff,
       cheaperProduct,
-    });
+    };
+
+    setResult(comparisonResult);
+
+    try {
+      const historyJson = await AsyncStorage.getItem('calculationHistory');
+      const history = historyJson ? JSON.parse(historyJson) : [];
+      
+      const newHistoryItem = {
+        id: Date.now().toString(),
+        type: 'compare',
+        productA: {
+          price: priceANum,
+          quantity: quantityANum,
+          unit: unitA,
+          pricePerUnit: pricePerUnitA,
+        },
+        productB: {
+          price: priceBNum,
+          quantity: quantityBNum,
+          unit: unitB,
+          pricePerUnit: pricePerUnitB,
+        },
+        cheaperProduct,
+        percentageDiff,
+        timestamp: Date.now(),
+      };
+
+      const newHistory = [newHistoryItem, ...history].slice(0, 20);
+
+      await AsyncStorage.setItem('calculationHistory', JSON.stringify(newHistory));
+      console.log('Comparison saved to history:', newHistoryItem);
+    } catch (error) {
+      console.log('Error saving comparison to history:', error);
+    }
   };
 
   const handleUnitSelect = (product: 'A' | 'B', unit: Unit) => {

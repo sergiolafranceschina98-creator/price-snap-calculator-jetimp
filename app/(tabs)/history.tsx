@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { colors, typography, spacing } from '@/styles/commonStyles';
 import { Stack, useFocusEffect } from 'expo-router';
 import {
@@ -13,17 +13,32 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
-interface HistoryItem {
+interface CalculationHistoryItem {
   id: string;
-  price: number;
-  quantity: number;
-  unit: string;
-  pricePerUnit: number;
+  type?: 'calculate' | 'compare';
+  price?: number;
+  quantity?: number;
+  unit?: string;
+  pricePerUnit?: number;
+  productA?: {
+    price: number;
+    quantity: number;
+    unit: string;
+    pricePerUnit: number;
+  };
+  productB?: {
+    price: number;
+    quantity: number;
+    unit: string;
+    pricePerUnit: number;
+  };
+  cheaperProduct?: 'A' | 'B';
+  percentageDiff?: number;
   timestamp: number;
 }
 
 export default function HistoryScreen() {
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [history, setHistory] = useState<CalculationHistoryItem[]>([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [clearAllModalVisible, setClearAllModalVisible] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -38,37 +53,32 @@ export default function HistoryScreen() {
   const loadHistory = async () => {
     try {
       const historyJson = await AsyncStorage.getItem('calculationHistory');
-      if (historyJson) {
-        const parsedHistory = JSON.parse(historyJson);
-        setHistory(parsedHistory);
-        console.log('Loaded history:', parsedHistory.length, 'items');
-      } else {
-        console.log('No history found in storage');
-        setHistory([]);
-      }
+      const loadedHistory = historyJson ? JSON.parse(historyJson) : [];
+      console.log('Loaded history items:', loadedHistory.length);
+      setHistory(loadedHistory);
     } catch (error) {
       console.log('Error loading history:', error);
     }
   };
 
   const deleteItem = async (id: string) => {
+    console.log('Deleting history item:', id);
     try {
       const newHistory = history.filter((item) => item.id !== id);
       await AsyncStorage.setItem('calculationHistory', JSON.stringify(newHistory));
       setHistory(newHistory);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      console.log('Deleted history item:', id);
     } catch (error) {
       console.log('Error deleting item:', error);
     }
   };
 
   const clearAllHistory = async () => {
+    console.log('Clearing all history');
     try {
       await AsyncStorage.removeItem('calculationHistory');
       setHistory([]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      console.log('Cleared all history');
     } catch (error) {
       console.log('Error clearing history:', error);
     }
@@ -82,12 +92,25 @@ export default function HistoryScreen() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 1) {
+      return 'Just now';
+    }
+    if (diffMins < 60) {
+      const minuteText = diffMins === 1 ? 'minute' : 'minutes';
+      return `${diffMins} ${minuteText} ago`;
+    }
+    if (diffHours < 24) {
+      const hourText = diffHours === 1 ? 'hour' : 'hours';
+      return `${diffHours} ${hourText} ago`;
+    }
+    if (diffDays < 7) {
+      const dayText = diffDays === 1 ? 'day' : 'days';
+      return `${dayText} ago`;
+    }
     
-    return date.toLocaleDateString();
+    const month = date.toLocaleString('default', { month: 'short' });
+    const day = date.getDate();
+    return `${month} ${day}`;
   };
 
   const handleDeletePress = (id: string) => {
@@ -100,9 +123,9 @@ export default function HistoryScreen() {
   const confirmDelete = () => {
     if (itemToDelete) {
       deleteItem(itemToDelete);
+      setItemToDelete(null);
     }
     setDeleteModalVisible(false);
-    setItemToDelete(null);
   };
 
   const handleClearAllPress = () => {
@@ -114,6 +137,81 @@ export default function HistoryScreen() {
   const confirmClearAll = () => {
     clearAllHistory();
     setClearAllModalVisible(false);
+  };
+
+  const renderHistoryItem = (item: CalculationHistoryItem) => {
+    const dateText = formatDate(item.timestamp);
+    
+    if (item.type === 'compare' && item.productA && item.productB) {
+      const priceAText = `$${item.productA.pricePerUnit.toFixed(3)}`;
+      const priceBText = `$${item.productB.pricePerUnit.toFixed(3)}`;
+      const savingsText = item.percentageDiff ? `${item.percentageDiff.toFixed(0)}%` : '';
+      const cheaperText = item.cheaperProduct === 'A' ? 'A' : 'B';
+      
+      return (
+        <View key={item.id} style={styles.historyItem}>
+          <View style={styles.historyContent}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyType}>COMPARISON</Text>
+              <Text style={styles.historyDate}>{dateText}</Text>
+            </View>
+            
+            <View style={styles.comparisonRow}>
+              <View style={styles.comparisonProduct}>
+                <Text style={styles.comparisonLabel}>Product A</Text>
+                <Text style={styles.comparisonPrice}>{priceAText}</Text>
+                <Text style={styles.comparisonUnit}>per {item.productA.unit}</Text>
+              </View>
+              
+              <View style={styles.comparisonVs}>
+                <Text style={styles.comparisonVsText}>vs</Text>
+              </View>
+              
+              <View style={styles.comparisonProduct}>
+                <Text style={styles.comparisonLabel}>Product B</Text>
+                <Text style={styles.comparisonPrice}>{priceBText}</Text>
+                <Text style={styles.comparisonUnit}>per {item.productB.unit}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.savingsBadge}>
+              <Text style={styles.savingsText}>Product {cheaperText} saves {savingsText}</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDeletePress(item.id)}
+          >
+            <Text style={styles.deleteButtonText}>×</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    
+    const priceText = item.price ? `$${item.price.toFixed(2)}` : '';
+    const quantityText = item.quantity ? item.quantity.toString() : '';
+    const unitText = item.unit || '';
+    const pricePerUnitText = item.pricePerUnit ? `$${item.pricePerUnit.toFixed(3)}` : '';
+    
+    return (
+      <View key={item.id} style={styles.historyItem}>
+        <View style={styles.historyContent}>
+          <View style={styles.historyHeader}>
+            <Text style={styles.historyType}>CALCULATION</Text>
+            <Text style={styles.historyDate}>{dateText}</Text>
+          </View>
+          <Text style={styles.historyCalculation}>{priceText} / {quantityText}{unitText}</Text>
+          <Text style={styles.historyResult}>{pricePerUnitText} per {unitText}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => handleDeletePress(item.id)}
+        >
+          <Text style={styles.deleteButtonText}>×</Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
@@ -133,46 +231,23 @@ export default function HistoryScreen() {
       {history.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateTitle}>No History Yet</Text>
-          <Text style={styles.emptyStateText}>
-            Your calculations will appear here
-          </Text>
+          <Text style={styles.emptyStateText}>Your calculations will appear here</Text>
         </View>
       ) : (
         <>
-          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-            {history.map((item, index) => {
-              const formattedDate = formatDate(item.timestamp);
-              const priceText = `$${item.price.toFixed(2)}`;
-              const quantityText = `${item.quantity}${item.unit}`;
-              const resultText = `$${item.pricePerUnit.toFixed(3)} per ${item.unit}`;
-
-              return (
-                <React.Fragment key={item.id}>
-                  <View style={styles.historyCard}>
-                    <View style={styles.historyContent}>
-                      <View style={styles.historyHeader}>
-                        <Text style={styles.historyInput}>{priceText}</Text>
-                        <Text style={styles.historySeparator}>/</Text>
-                        <Text style={styles.historyInput}>{quantityText}</Text>
-                      </View>
-                      <Text style={styles.historyResult}>{resultText}</Text>
-                      <Text style={styles.historyDate}>{formattedDate}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeletePress(item.id)}
-                    >
-                      <Text style={styles.deleteButtonText}>×</Text>
-                    </TouchableOpacity>
-                  </View>
-                </React.Fragment>
-              );
-            })}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {history.map((item) => renderHistoryItem(item))}
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.clearButton} onPress={handleClearAllPress}>
-              <Text style={styles.clearButtonText}>Clear All History</Text>
+            <TouchableOpacity
+              style={styles.clearAllButton}
+              onPress={handleClearAllPress}
+            >
+              <Text style={styles.clearAllButtonText}>Clear All History</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -180,16 +255,14 @@ export default function HistoryScreen() {
 
       <Modal
         visible={deleteModalVisible}
-        transparent
+        transparent={true}
         animationType="fade"
         onRequestClose={() => setDeleteModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Delete Item?</Text>
-            <Text style={styles.modalText}>
-              This calculation will be removed from your history.
-            </Text>
+            <Text style={styles.modalText}>This action cannot be undone.</Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
@@ -198,10 +271,10 @@ export default function HistoryScreen() {
                 <Text style={styles.modalButtonTextCancel}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
+                style={[styles.modalButton, styles.modalButtonDelete]}
                 onPress={confirmDelete}
               >
-                <Text style={styles.modalButtonTextConfirm}>Delete</Text>
+                <Text style={styles.modalButtonTextDelete}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -210,16 +283,14 @@ export default function HistoryScreen() {
 
       <Modal
         visible={clearAllModalVisible}
-        transparent
+        transparent={true}
         animationType="fade"
         onRequestClose={() => setClearAllModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Clear All History?</Text>
-            <Text style={styles.modalText}>
-              All your calculation history will be permanently deleted.
-            </Text>
+            <Text style={styles.modalText}>This will delete all your calculations and comparisons.</Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
@@ -228,10 +299,10 @@ export default function HistoryScreen() {
                 <Text style={styles.modalButtonTextCancel}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
+                style={[styles.modalButton, styles.modalButtonDelete]}
                 onPress={confirmClearAll}
               >
-                <Text style={styles.modalButtonTextConfirm}>Clear All</Text>
+                <Text style={styles.modalButtonTextDelete}>Clear All</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -260,7 +331,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   emptyStateTitle: {
-    ...typography.heading,
+    ...typography.title,
     fontSize: 24,
     marginBottom: spacing.sm,
   },
@@ -269,97 +340,135 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  historyCard: {
+  historyItem: {
     backgroundColor: colors.card,
     borderRadius: 20,
     padding: spacing.lg,
     marginBottom: spacing.md,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: colors.shadowDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    alignItems: 'flex-start',
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   historyContent: {
     flex: 1,
   },
   historyHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  historyInput: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  historySeparator: {
-    fontSize: 18,
-    fontWeight: '400',
-    color: colors.textSecondary,
-    marginHorizontal: spacing.sm,
-  },
-  historyResult: {
-    fontSize: 16,
-    fontWeight: '600',
+  historyType: {
+    ...typography.label,
+    fontSize: 11,
     color: colors.primary,
-    marginBottom: spacing.xs,
   },
   historyDate: {
     fontSize: 13,
-    fontWeight: '400',
+    fontWeight: '500',
     color: colors.textSecondary,
   },
-  deleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.inputBackground,
+  historyCalculation: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  historyResult: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  comparisonRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  comparisonProduct: {
+    flex: 1,
+  },
+  comparisonLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  comparisonPrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  comparisonUnit: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  comparisonVs: {
+    paddingHorizontal: spacing.sm,
+  },
+  comparisonVsText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  savingsBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  savingsText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  deleteButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.inputBackground,
     justifyContent: 'center',
-    marginLeft: spacing.md,
+    alignItems: 'center',
+    marginLeft: spacing.sm,
   },
   deleteButtonText: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: colors.error,
+    fontSize: 24,
+    fontWeight: '400',
+    color: colors.textSecondary,
     lineHeight: 28,
   },
   footer: {
     padding: spacing.lg,
     paddingBottom: spacing.xl,
-    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  clearButton: {
-    backgroundColor: colors.error,
+  clearAllButton: {
+    backgroundColor: colors.inputBackground,
     borderRadius: 16,
     padding: spacing.md + 4,
     alignItems: 'center',
-    shadowColor: colors.error,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 2,
+    borderColor: colors.border,
   },
-  clearButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+  clearAllButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlay,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.lg,
+    padding: spacing.xl,
   },
   modalContent: {
     backgroundColor: colors.card,
@@ -367,23 +476,22 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     width: '100%',
     maxWidth: 400,
-    shadowColor: colors.shadowDark,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalTitle: {
-    ...typography.heading,
     fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   modalText: {
-    ...typography.body,
+    fontSize: 16,
+    fontWeight: '500',
     color: colors.textSecondary,
+    marginBottom: spacing.lg,
     textAlign: 'center',
-    marginBottom: spacing.xl,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -391,8 +499,8 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    padding: spacing.md + 2,
-    borderRadius: 14,
+    padding: spacing.md + 4,
+    borderRadius: 16,
     alignItems: 'center',
   },
   modalButtonCancel: {
@@ -400,7 +508,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
   },
-  modalButtonConfirm: {
+  modalButtonDelete: {
     backgroundColor: colors.error,
   },
   modalButtonTextCancel: {
@@ -408,9 +516,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
-  modalButtonTextConfirm: {
+  modalButtonTextDelete: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 });
