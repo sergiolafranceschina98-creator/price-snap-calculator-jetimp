@@ -118,7 +118,7 @@ export default function CalculateScreen() {
         options={{
           headerShown: true,
           title: 'PriceSnap',
-          headerLargeTitle: true,
+          headerLargeTitle: false,
           headerStyle: {
             backgroundColor: colors.background,
           },
@@ -216,10 +216,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingBottom: 120,
+    paddingTop: spacing.md,
+    paddingBottom: 140,
   },
   header: {
     marginBottom: spacing.lg,
+    marginTop: spacing.xs,
   },
   subtitle: {
     ...typography.subtitle,
