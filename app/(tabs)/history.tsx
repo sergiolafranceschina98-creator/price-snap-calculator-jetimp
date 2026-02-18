@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { colors, typography, spacing } from '@/styles/commonStyles';
-import { Stack } from 'expo-router';
+import { Stack, useFocusEffect } from 'expo-router';
 import {
   View,
   Text,
@@ -28,9 +28,12 @@ export default function HistoryScreen() {
   const [clearAllModalVisible, setClearAllModalVisible] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('History screen focused - loading history');
+      loadHistory();
+    }, [])
+  );
 
   const loadHistory = async () => {
     try {
@@ -39,6 +42,9 @@ export default function HistoryScreen() {
         const parsedHistory = JSON.parse(historyJson);
         setHistory(parsedHistory);
         console.log('Loaded history:', parsedHistory.length, 'items');
+      } else {
+        console.log('No history found in storage');
+        setHistory([]);
       }
     } catch (error) {
       console.log('Error loading history:', error);
