@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -22,7 +21,6 @@ const DECIMAL_OPTIONS: DecimalPrecision[] = [2, 3, 4];
 export default function SettingsScreen() {
   const [defaultUnit, setDefaultUnit] = useState<Unit>('g');
   const [decimalPrecision, setDecimalPrecision] = useState<DecimalPrecision>(3);
-  const [clearModalVisible, setClearModalVisible] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -64,27 +62,6 @@ export default function SettingsScreen() {
     } catch (error) {
       console.log('Error saving decimal precision:', error);
     }
-  };
-
-  const clearHistory = async () => {
-    try {
-      await AsyncStorage.removeItem('calculationHistory');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      console.log('Cleared history from settings');
-    } catch (error) {
-      console.log('Error clearing history:', error);
-    }
-  };
-
-  const handleClearHistoryPress = () => {
-    console.log('User tapped Clear History');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setClearModalVisible(true);
-  };
-
-  const confirmClearHistory = () => {
-    clearHistory();
-    setClearModalVisible(false);
   };
 
   return (
@@ -169,48 +146,11 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>DATA</Text>
-          <TouchableOpacity style={styles.clearButton} onPress={handleClearHistoryPress}>
-            <Text style={styles.clearButtonText}>Clear History</Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.footer}>
           <Text style={styles.footerText}>PriceSnap v1.0</Text>
           <Text style={styles.footerSubtext}>Know the real price instantly</Text>
         </View>
       </ScrollView>
-
-      <Modal
-        visible={clearModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setClearModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Clear History?</Text>
-            <Text style={styles.modalText}>
-              All your calculation history will be permanently deleted.
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => setClearModalVisible(false)}
-              >
-                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
-                onPress={confirmClearHistory}
-              >
-                <Text style={styles.modalButtonTextConfirm}>Clear</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -307,23 +247,6 @@ const styles = StyleSheet.create({
   precisionExampleActive: {
     color: 'rgba(255, 255, 255, 0.8)',
   },
-  clearButton: {
-    backgroundColor: colors.error,
-    borderRadius: 16,
-    padding: spacing.md + 4,
-    alignItems: 'center',
-    shadowColor: colors.error,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  clearButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
   footer: {
     alignItems: 'center',
     marginTop: spacing.xl,
@@ -341,64 +264,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '400',
     color: colors.textSecondary,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  modalContent: {
-    backgroundColor: colors.card,
-    borderRadius: 24,
-    padding: spacing.xl,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: colors.shadowDark,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  modalTitle: {
-    ...typography.heading,
-    fontSize: 22,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  modalText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  modalButton: {
-    flex: 1,
-    padding: spacing.md + 2,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  modalButtonCancel: {
-    backgroundColor: colors.inputBackground,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  modalButtonConfirm: {
-    backgroundColor: colors.error,
-  },
-  modalButtonTextCancel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  modalButtonTextConfirm: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
 });
