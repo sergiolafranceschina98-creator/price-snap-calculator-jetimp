@@ -130,7 +130,13 @@ export default function CalculateScreen() {
     >
       <Stack.Screen
         options={{
-          headerShown: false,
+          headerShown: true,
+          title: 'PriceSnap',
+          headerLargeTitle: true,
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTintColor: colors.text,
         }}
       />
       <ScrollView
@@ -139,7 +145,6 @@ export default function CalculateScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.title}>PriceSnap</Text>
           <Text style={styles.subtitle}>Know the real price instantly</Text>
         </View>
 
@@ -225,15 +230,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingTop: spacing.xxl + spacing.lg,
     paddingBottom: spacing.xxl,
   },
   header: {
-    marginBottom: spacing.xl,
-  },
-  title: {
-    ...typography.title,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.lg,
   },
   subtitle: {
     ...typography.subtitle,

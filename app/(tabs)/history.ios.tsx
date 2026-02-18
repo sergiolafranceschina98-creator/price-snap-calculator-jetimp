@@ -114,7 +114,13 @@ export default function HistoryScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          headerShown: false,
+          headerShown: true,
+          title: 'History',
+          headerLargeTitle: true,
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTintColor: colors.text,
         }}
       />
 
@@ -233,7 +239,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: spacing.xxl + spacing.lg,
   },
   scrollView: {
     flex: 1,

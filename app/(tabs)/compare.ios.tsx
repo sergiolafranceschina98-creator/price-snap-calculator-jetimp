@@ -141,7 +141,13 @@ export default function CompareScreen() {
     >
       <Stack.Screen
         options={{
-          headerShown: false,
+          headerShown: true,
+          title: 'Compare',
+          headerLargeTitle: true,
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTintColor: colors.text,
         }}
       />
       <ScrollView
@@ -150,7 +156,6 @@ export default function CompareScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Compare</Text>
           <Text style={styles.subtitle}>Find the better deal</Text>
         </View>
 
@@ -327,15 +332,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingTop: spacing.xxl + spacing.lg,
     paddingBottom: spacing.xxl,
   },
   header: {
-    marginBottom: spacing.xl,
-  },
-  title: {
-    ...typography.title,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.lg,
   },
   subtitle: {
     ...typography.subtitle,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   productLabel: {
     ...typography.label,
     fontSize: 15,
-    color: colors.secondary,
+    color: colors.primary,
   },
   inputGroup: {
     marginBottom: spacing.md,
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   resultCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.secondary,
     borderRadius: 20,
     padding: spacing.lg,
     alignItems: 'center',

@@ -1,40 +1,40 @@
 
 import { StyleSheet } from 'react-native';
 
-// PriceSnap Premium Color Theme - Sophisticated & Elegant
+// PriceSnap Premium Color Theme - Sophisticated & Elegant with Deep Navy
 export const colors = {
-  // Premium color palette - Deep navy, warm accents, keeping green
-  background: '#F5F7FA', // Soft blue-gray background
-  card: '#FFFFFF',
-  text: '#1A202C', // Rich charcoal
-  textSecondary: '#64748B', // Sophisticated gray-blue
+  // Premium color palette - Deep navy cards, warm accents, keeping green
+  background: '#0F172A', // Deep navy background (darker)
+  card: '#1E293B', // Deep navy for cards
+  text: '#F8FAFC', // Light text for contrast on dark background
+  textSecondary: '#94A3B8', // Lighter gray-blue for secondary text
   primary: '#10B981', // Keep the green as requested
-  secondary: '#1E293B', // Deep navy for sophistication
+  secondary: '#334155', // Lighter navy for secondary elements
   accent: '#D97706', // Rich amber for warmth
-  highlight: '#ECFDF5', // Subtle green tint for results
-  border: '#E2E8F0',
+  highlight: '#064E3B', // Dark green tint for results
+  border: '#334155',
   success: '#10B981',
   error: '#DC2626',
   warning: '#F59E0B',
   
   // Specific UI elements - Premium feel
-  inputBackground: '#F8FAFC',
-  shadow: 'rgba(30, 41, 59, 0.08)',
-  shadowDark: 'rgba(30, 41, 59, 0.15)',
+  inputBackground: '#334155',
+  shadow: 'rgba(0, 0, 0, 0.3)',
+  shadowDark: 'rgba(0, 0, 0, 0.5)',
   cheaper: '#10B981',
   expensive: '#DC2626',
   
   // Additional premium colors
-  cardBorder: '#F1F5F9',
-  divider: '#E2E8F0',
-  overlay: 'rgba(15, 23, 42, 0.6)',
+  cardBorder: '#475569',
+  divider: '#334155',
+  overlay: 'rgba(15, 23, 42, 0.9)',
   
   // Gradient colors for premium feel
   gradientStart: '#10B981',
   gradientEnd: '#059669',
   
   // Subtle tints for depth
-  backgroundTint: '#EFF6FF',
+  backgroundTint: '#1E293B',
   accentLight: '#FEF3C7',
 };
 

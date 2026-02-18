@@ -91,15 +91,17 @@ export default function SettingsScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          headerShown: false,
+          headerShown: true,
+          title: 'Settings',
+          headerLargeTitle: true,
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTintColor: colors.text,
         }}
       />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-        </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>DEFAULT UNIT</Text>
           <View style={styles.card}>
@@ -223,14 +225,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingTop: spacing.xxl + spacing.lg,
     paddingBottom: spacing.xxl,
-  },
-  header: {
-    marginBottom: spacing.xl,
-  },
-  title: {
-    ...typography.title,
   },
   section: {
     marginBottom: spacing.xl,
