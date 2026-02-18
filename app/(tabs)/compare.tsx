@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Stack } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import { colors, typography, spacing } from '@/styles/commonStyles';
 import {
   View,
   Text,
@@ -11,12 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { colors, typography, spacing } from '@/styles/commonStyles';
+import { Stack } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
 type Unit = 'g' | 'kg' | 'ml' | 'L' | 'oz' | 'lb' | 'pcs';
-
-const UNITS: Unit[] = ['g', 'kg', 'ml', 'L', 'oz', 'lb', 'pcs'];
 
 interface ComparisonResult {
   productA: {
@@ -31,6 +30,8 @@ interface ComparisonResult {
   cheaperProduct: 'A' | 'B';
 }
 
+const UNITS: Unit[] = ['g', 'kg', 'ml', 'L', 'oz', 'lb', 'pcs'];
+
 export default function CompareScreen() {
   const [priceA, setPriceA] = useState('');
   const [quantityA, setQuantityA] = useState('');
@@ -41,25 +42,46 @@ export default function CompareScreen() {
   const [unitB, setUnitB] = useState<Unit>('g');
 
   const [result, setResult] = useState<ComparisonResult | null>(null);
+  const [decimalPrecision, setDecimalPrecision] = useState(4);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const precision = await AsyncStorage.getItem('decimalPrecision');
+      if (precision) {
+        setDecimalPrecision(parseInt(precision));
+      }
+    } catch (error) {
+      console.log('Error loading settings:', error);
+    }
+  };
 
   const handleCompare = () => {
     console.log('User tapped COMPARE NOW button');
+
     const priceANum = parseFloat(priceA);
     const quantityANum = parseFloat(quantityA);
     const priceBNum = parseFloat(priceB);
     const quantityBNum = parseFloat(quantityB);
 
     if (
-      isNaN(priceANum) ||
-      isNaN(quantityANum) ||
-      isNaN(priceBNum) ||
-      isNaN(quantityBNum) ||
-      quantityANum === 0 ||
-      quantityBNum === 0
+      !priceANum ||
+      !quantityANum ||
+      !priceBNum ||
+      !quantityBNum ||
+      priceANum <= 0 ||
+      quantityANum <= 0 ||
+      priceBNum <= 0 ||
+      quantityBNum <= 0
     ) {
-      console.log('Invalid input - one or more values are not valid numbers');
+      console.log('Invalid input - one or more values are zero or negative');
       return;
     }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const pricePerUnitA = priceANum / quantityANum;
     const pricePerUnitB = priceBNum / quantityBNum;
@@ -70,7 +92,7 @@ export default function CompareScreen() {
         ? ((pricePerUnitB - pricePerUnitA) / pricePerUnitB) * 100
         : ((pricePerUnitA - pricePerUnitB) / pricePerUnitA) * 100;
 
-    const comparison: ComparisonResult = {
+    const comparisonResult: ComparisonResult = {
       productA: {
         pricePerUnit: pricePerUnitA,
         isCheaper: cheaperProduct === 'A',
@@ -83,30 +105,34 @@ export default function CompareScreen() {
       cheaperProduct,
     };
 
-    console.log('Comparison result:', comparison);
-    setResult(comparison);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setResult(comparisonResult);
+    console.log('Comparison result:', comparisonResult);
   };
 
   const handleUnitSelect = (product: 'A' | 'B', unit: Unit) => {
     console.log(`User selected unit ${unit} for Product ${product}`);
+    Haptics.selectionAsync();
     if (product === 'A') {
       setUnitA(unit);
     } else {
       setUnitB(unit);
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const pricePerUnitAText = result ? result.productA.pricePerUnit.toFixed(4) : '';
-  const pricePerUnitBText = result ? result.productB.pricePerUnit.toFixed(4) : '';
-  const percentageDiffText = result ? result.percentageDiff.toFixed(1) : '';
-  const cheaperProductText = result ? result.cheaperProduct : '';
+  const formatPrice = (price: number) => {
+    return price.toFixed(decimalPrecision);
+  };
+
+  const priceAFormatted = result ? formatPrice(result.productA.pricePerUnit) : '';
+  const priceBFormatted = result ? formatPrice(result.productB.pricePerUnit) : '';
+  const percentageText = result ? `${result.percentageDiff.toFixed(1)}%` : '';
+  const cheaperText = result ? `Product ${result.cheaperProduct}` : '';
 
   return (
     <>
       <Stack.Screen
         options={{
+          headerShown: true,
           title: 'Compare',
           headerLargeTitle: true,
         }}
@@ -116,14 +142,13 @@ export default function CompareScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
-          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Product A Card */}
-          <View style={styles.productCard}>
-            <Text style={styles.productTitle}>Product A</Text>
+          <Text style={styles.header}>Compare Two Products</Text>
 
+          <View style={styles.productCard}>
+            <Text style={styles.productLabel}>Product A</Text>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Price</Text>
               <TextInput
@@ -135,7 +160,6 @@ export default function CompareScreen() {
                 onChangeText={setPriceA}
               />
             </View>
-
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Quantity</Text>
               <TextInput
@@ -147,7 +171,6 @@ export default function CompareScreen() {
                 onChangeText={setQuantityA}
               />
             </View>
-
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Unit</Text>
               <ScrollView
@@ -156,7 +179,7 @@ export default function CompareScreen() {
                 contentContainerStyle={styles.unitSelector}
               >
                 {UNITS.map((unit) => {
-                  const isSelected = unit === unitA;
+                  const isSelected = unitA === unit;
                   return (
                     <TouchableOpacity
                       key={unit}
@@ -181,10 +204,8 @@ export default function CompareScreen() {
             </View>
           </View>
 
-          {/* Product B Card */}
           <View style={styles.productCard}>
-            <Text style={styles.productTitle}>Product B</Text>
-
+            <Text style={styles.productLabel}>Product B</Text>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Price</Text>
               <TextInput
@@ -196,7 +217,6 @@ export default function CompareScreen() {
                 onChangeText={setPriceB}
               />
             </View>
-
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Quantity</Text>
               <TextInput
@@ -208,7 +228,6 @@ export default function CompareScreen() {
                 onChangeText={setQuantityB}
               />
             </View>
-
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Unit</Text>
               <ScrollView
@@ -217,7 +236,7 @@ export default function CompareScreen() {
                 contentContainerStyle={styles.unitSelector}
               >
                 {UNITS.map((unit) => {
-                  const isSelected = unit === unitB;
+                  const isSelected = unitB === unit;
                   return (
                     <TouchableOpacity
                       key={unit}
@@ -242,15 +261,12 @@ export default function CompareScreen() {
             </View>
           </View>
 
-          {/* Compare Button */}
           <TouchableOpacity style={styles.compareButton} onPress={handleCompare}>
             <Text style={styles.compareButtonText}>COMPARE NOW</Text>
           </TouchableOpacity>
 
-          {/* Result Section */}
           {result && (
             <View style={styles.resultSection}>
-              {/* Product A Result */}
               <View
                 style={[
                   styles.resultCard,
@@ -260,11 +276,11 @@ export default function CompareScreen() {
                 ]}
               >
                 <Text style={styles.resultProductLabel}>Product A</Text>
-                <Text style={styles.resultPrice}>{pricePerUnitAText}</Text>
-                <Text style={styles.resultUnit}>per {unitA}</Text>
+                <Text style={styles.resultPrice}>
+                  ${priceAFormatted} per {unitA}
+                </Text>
               </View>
 
-              {/* Product B Result */}
               <View
                 style={[
                   styles.resultCard,
@@ -274,15 +290,16 @@ export default function CompareScreen() {
                 ]}
               >
                 <Text style={styles.resultProductLabel}>Product B</Text>
-                <Text style={styles.resultPrice}>{pricePerUnitBText}</Text>
-                <Text style={styles.resultUnit}>per {unitB}</Text>
+                <Text style={styles.resultPrice}>
+                  ${priceBFormatted} per {unitB}
+                </Text>
               </View>
 
-              {/* Winner Card */}
-              <View style={styles.winnerCard}>
-                <Text style={styles.winnerIcon}>✅</Text>
-                <Text style={styles.winnerText}>Product {cheaperProductText} is</Text>
-                <Text style={styles.winnerPercentage}>{percentageDiffText}% cheaper</Text>
+              <View style={styles.savingsCard}>
+                <Text style={styles.savingsIcon}>✅</Text>
+                <Text style={styles.savingsText}>
+                  {cheaperText} is {percentageText} cheaper
+                </Text>
               </View>
             </View>
           )}
@@ -297,24 +314,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
     padding: spacing.lg,
   },
+  header: {
+    ...typography.heading,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
   productCard: {
     backgroundColor: colors.card,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: spacing.lg,
     shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 3,
     marginBottom: spacing.lg,
   },
-  productTitle: {
+  productLabel: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.text,
@@ -363,21 +382,15 @@ const styles = StyleSheet.create({
   },
   compareButton: {
     backgroundColor: colors.secondary,
-    borderRadius: 16,
-    padding: spacing.lg,
+    borderRadius: 12,
+    padding: spacing.md,
     alignItems: 'center',
-    shadowColor: colors.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
     marginBottom: spacing.lg,
   },
   compareButtonText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 1,
   },
   resultSection: {
     gap: spacing.md,
@@ -385,16 +398,14 @@ const styles = StyleSheet.create({
   resultCard: {
     borderRadius: 16,
     padding: spacing.lg,
-    alignItems: 'center',
+    borderWidth: 3,
   },
   resultCardCheaper: {
-    backgroundColor: '#D1FAE5',
-    borderWidth: 2,
+    backgroundColor: '#ECFDF5',
     borderColor: colors.cheaper,
   },
   resultCardExpensive: {
-    backgroundColor: '#FEE2E2',
-    borderWidth: 2,
+    backgroundColor: '#FEF2F2',
     borderColor: colors.expensive,
   },
   resultProductLabel: {
@@ -404,34 +415,24 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   resultPrice: {
-    fontSize: 32,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '700',
     color: colors.text,
   },
-  resultUnit: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  winnerCard: {
-    backgroundColor: colors.primary,
-    borderRadius: 20,
-    padding: spacing.xl,
+  savingsCard: {
+    backgroundColor: colors.success,
+    borderRadius: 16,
+    padding: spacing.lg,
     alignItems: 'center',
   },
-  winnerIcon: {
-    fontSize: 48,
+  savingsIcon: {
+    fontSize: 32,
     marginBottom: spacing.sm,
   },
-  winnerText: {
-    fontSize: 18,
-    fontWeight: '600',
+  savingsText: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: spacing.xs,
-  },
-  winnerPercentage: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    textAlign: 'center',
   },
 });

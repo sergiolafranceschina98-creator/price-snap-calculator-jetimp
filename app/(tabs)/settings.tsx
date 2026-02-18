@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
-import { Stack } from 'expo-router';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
+  Modal,
 } from 'react-native';
 import { colors, typography, spacing } from '@/styles/commonStyles';
-import * as Haptics from 'expo-haptics';
+import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 
 type Unit = 'g' | 'kg' | 'ml' | 'L' | 'oz' | 'lb' | 'pcs';
 type DecimalPrecision = 2 | 3 | 4;
@@ -22,6 +22,7 @@ const DECIMAL_OPTIONS: DecimalPrecision[] = [2, 3, 4];
 export default function SettingsScreen() {
   const [defaultUnit, setDefaultUnit] = useState<Unit>('g');
   const [decimalPrecision, setDecimalPrecision] = useState<DecimalPrecision>(4);
+  const [clearModalVisible, setClearModalVisible] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -29,27 +30,25 @@ export default function SettingsScreen() {
 
   const loadSettings = async () => {
     try {
-      const storedUnit = await AsyncStorage.getItem('defaultUnit');
-      const storedPrecision = await AsyncStorage.getItem('decimalPrecision');
-      
-      if (storedUnit) {
-        setDefaultUnit(storedUnit as Unit);
+      const unit = await AsyncStorage.getItem('defaultUnit');
+      const precision = await AsyncStorage.getItem('decimalPrecision');
+
+      if (unit) {
+        setDefaultUnit(unit as Unit);
       }
-      if (storedPrecision) {
-        setDecimalPrecision(parseInt(storedPrecision) as DecimalPrecision);
+      if (precision) {
+        setDecimalPrecision(parseInt(precision) as DecimalPrecision);
       }
-      
-      console.log('Settings loaded:', { unit: storedUnit, precision: storedPrecision });
+      console.log('Settings loaded');
     } catch (error) {
       console.log('Error loading settings:', error);
     }
   };
 
   const saveDefaultUnit = async (unit: Unit) => {
-    console.log('User changed default unit to:', unit);
+    console.log('Saving default unit:', unit);
+    Haptics.selectionAsync();
     setDefaultUnit(unit);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
     try {
       await AsyncStorage.setItem('defaultUnit', unit);
       console.log('Default unit saved');
@@ -59,10 +58,9 @@ export default function SettingsScreen() {
   };
 
   const saveDecimalPrecision = async (precision: DecimalPrecision) => {
-    console.log('User changed decimal precision to:', precision);
+    console.log('Saving decimal precision:', precision);
+    Haptics.selectionAsync();
     setDecimalPrecision(precision);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
     try {
       await AsyncStorage.setItem('decimalPrecision', precision.toString());
       console.log('Decimal precision saved');
@@ -72,52 +70,43 @@ export default function SettingsScreen() {
   };
 
   const clearHistory = async () => {
-    console.log('User tapped Clear History');
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    
-    Alert.alert(
-      'Clear History',
-      'Are you sure you want to delete all calculation history?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AsyncStorage.removeItem('priceSnapHistory');
-              console.log('History cleared from settings');
-              Alert.alert('Success', 'History has been cleared');
-            } catch (error) {
-              console.log('Error clearing history:', error);
-            }
-          },
-        },
-      ]
-    );
+    console.log('Clearing history from settings');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    try {
+      await AsyncStorage.setItem('history', JSON.stringify([]));
+      console.log('History cleared');
+    } catch (error) {
+      console.log('Error clearing history:', error);
+    }
+  };
+
+  const handleClearHistoryPress = () => {
+    setClearModalVisible(true);
+  };
+
+  const confirmClearHistory = () => {
+    clearHistory();
+    setClearModalVisible(false);
   };
 
   return (
     <>
       <Stack.Screen
         options={{
+          headerShown: true,
           title: 'Settings',
+          headerLargeTitle: true,
         }}
       />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {/* Default Unit Section */}
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Default Unit</Text>
-          <Text style={styles.sectionSubtitle}>
+          <Text style={styles.sectionDescription}>
             Choose your preferred unit for calculations
           </Text>
-          
           <View style={styles.optionsGrid}>
             {UNITS.map((unit) => {
-              const isSelected = unit === defaultUnit;
+              const isSelected = defaultUnit === unit;
               return (
                 <TouchableOpacity
                   key={unit}
@@ -141,24 +130,19 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Decimal Precision Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Decimal Precision</Text>
-          <Text style={styles.sectionSubtitle}>
+          <Text style={styles.sectionDescription}>
             Number of decimal places in results
           </Text>
-          
           <View style={styles.optionsRow}>
             {DECIMAL_OPTIONS.map((precision) => {
-              const isSelected = precision === decimalPrecision;
-              const precisionText = `${precision} decimals`;
-              
+              const isSelected = decimalPrecision === precision;
               return (
                 <TouchableOpacity
                   key={precision}
                   style={[
                     styles.optionButton,
-                    styles.optionButtonWide,
                     isSelected && styles.optionButtonSelected,
                   ]}
                   onPress={() => saveDecimalPrecision(precision)}
@@ -169,7 +153,7 @@ export default function SettingsScreen() {
                       isSelected && styles.optionButtonTextSelected,
                     ]}
                   >
-                    {precisionText}
+                    {precision}
                   </Text>
                 </TouchableOpacity>
               );
@@ -177,20 +161,52 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Data Management Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Data Management</Text>
-          
-          <TouchableOpacity style={styles.dangerButton} onPress={clearHistory}>
+          <Text style={styles.sectionTitle}>Data</Text>
+          <TouchableOpacity
+            style={styles.dangerButton}
+            onPress={handleClearHistoryPress}
+          >
             <Text style={styles.dangerButtonText}>Clear History</Text>
           </TouchableOpacity>
         </View>
 
-        {/* App Info */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoText}>PriceSnap v1.0</Text>
-          <Text style={styles.infoSubtext}>Smart Unit Price Calculator</Text>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>PriceSnap v1.0</Text>
+          <Text style={styles.footerSubtext}>
+            Simple, fast, premium unit price calculator
+          </Text>
         </View>
+
+        <Modal
+          visible={clearModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setClearModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Clear History?</Text>
+              <Text style={styles.modalMessage}>
+                This will permanently delete all your calculation history.
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => setClearModalVisible(false)}
+                >
+                  <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonConfirm]}
+                  onPress={confirmClearHistory}
+                >
+                  <Text style={styles.modalButtonTextConfirm}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </>
   );
@@ -201,7 +217,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
+  scrollContent: {
     padding: spacing.lg,
   },
   section: {
@@ -213,9 +229,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.xs,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
+  sectionDescription: {
+    ...typography.subtitle,
     marginBottom: spacing.md,
   },
   optionsGrid: {
@@ -229,16 +244,13 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: 12,
     backgroundColor: colors.inputBackground,
     borderWidth: 2,
     borderColor: colors.border,
     minWidth: 60,
     alignItems: 'center',
-  },
-  optionButtonWide: {
-    flex: 1,
   },
   optionButtonSelected: {
     backgroundColor: colors.primary,
@@ -263,21 +275,72 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  infoSection: {
+  footer: {
     alignItems: 'center',
     marginTop: spacing.xl,
     paddingTop: spacing.xl,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  infoText: {
+  footerText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.xs,
   },
-  infoSubtext: {
-    fontSize: 14,
+  footerSubtext: {
+    ...typography.subtitle,
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  modalMessage: {
+    fontSize: 16,
     color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  modalButton: {
+    flex: 1,
+    borderRadius: 12,
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: colors.inputBackground,
+  },
+  modalButtonConfirm: {
+    backgroundColor: colors.error,
+  },
+  modalButtonTextCancel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  modalButtonTextConfirm: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
